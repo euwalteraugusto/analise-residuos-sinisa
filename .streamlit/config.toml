@@ -1,0 +1,16 @@
+[server]
+headless = true
+
+[theme]
+base = "light"
+primaryColor = "#1F5E4B"
+backgroundColor = "#F7F5F0"
+secondaryBackgroundColor = "#ECE8DE"
+textColor = "#1F2A24"
+linkColor = "#1F5E4B"
+borderColor = "#D6D1C4"
+font = "sans-serif"
+headingFont = "serif"
+baseRadius = "4px"
+showWidgetBorder = true
+chartCategoricalColors = ["#1F5E4B", "#B5451B", "#8A8F98", "#D9A441"]
