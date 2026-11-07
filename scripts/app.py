@@ -269,7 +269,7 @@ st.divider()
 # -----------------------------------------------------------------------------
 with st.expander("Metodologia, definições e limitações"):
     st.markdown(
-        "- **Fonte:** Ministério das Cidades, SINISA 2024 (ano de referência 2023), planilha de indicadores de "
+        "- **Fonte:** Ministério das Cidades, SINISA 2025 (ano de referência 2024), planilha de indicadores de "
         "resíduos sólidos urbanos.\n"
         f"- **Cobertura:** {int(df_municipios['respondeu'].sum())} de {len(df_municipios)} municípios do país "
         f"responderam ao módulo ({df_municipios['respondeu'].mean() * 100:.1f}%). Os demais ficam fora da análise.\n"

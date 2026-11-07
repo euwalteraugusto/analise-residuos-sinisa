@@ -1,40 +1,47 @@
 # ♻️ MPV - Análise e Diagnóstico da Gestão de Resíduos Sólidos
 
-Projeto interdisciplinar de extensão universitária desenvolvido para organizar, analisar e apresentar dados públicos sobre a gestão de resíduos sólidos (SINISA 2024), integrando estatística, banco de dados e engenharia de software com um diagnóstico ambiental prático.
+Projeto de extensão do 4º semestre (FATEC São Bernardo do Campo). Organiza, analisa e apresenta dados abertos do **SINISA 2025 (ano de referência 2024)** sobre resíduos sólidos urbanos e integra o resultado a um diagnóstico ambiental e de qualidade feito na empresa CGA Equipamentos Contra Incêndio LTDA.
 
-## 🎯 Objetivos do Projeto
-- **Banco de Dados:** Modelagem relacional e estruturação de dados em SQLite a partir de um processo de ETL (Extração, Transformação e Carga).
-- **Estatística:** Análise descritiva de indicadores ambientais e geração de rankings estaduais.
-- **Gestão da Qualidade:** Aplicação de ferramentas (PDCA, 5W2H, Ishikawa) para propor melhorias operacionais e ambientais na empresa CGA Equipamentos Contra Incêndio LTDA.
-- **Programação II:** Desenvolvimento de um dashboard interativo utilizando Python e Streamlit.
+**Público-alvo:** comunidade em geral (gestores, estudantes, empresas pequenas).
 
-## 🛠️ Tecnologias Utilizadas
-- **Python 3.x** (Lógica, ETL e Backend)
-- **Pandas** (Tratamento de Dados e Estatística)
-- **SQLite3** (Banco de Dados Relacional embutido)
-- **Streamlit** (Criação do Dashboard Web - MPV)
+## O que o projeto entrega
+| Entrega | Onde |
+|---|---|
+| Script de banco de dados (SQL) documentado | `sql/01_schema.sql` (esquema) e `sql/02_consultas.sql` (consultas) |
+| Código-fonte da aplicação web (Streamlit) | `scripts/app.py` |
+| ETL (Excel → SQLite) | `scripts/etl_sqlite.py` |
+| Planilha estatística com análises | `resultados/Analise_Estatistica_Residuos.xlsx` |
+| Relatório diagnóstico de qualidade | `analise-residuos-sinisa.docx` |
+| MPV publicado | _link da aplicação: preencher após o deploy_ |
 
-## 📂 Estrutura do Repositório
+## Como rodar
+Requer Python 3.10+.
+```bash
+pip install -r requirements.txt
+python scripts/etl_sqlite.py        # recria dados_tratados/projeto_residuos.db
+streamlit run scripts/app.py        # abre o dashboard
+```
+Para regenerar a planilha: `python scripts/gerar_planilha.py` (usa `scripts/analise_estatistica.py`).
+
+## Estrutura
 ```text
-📦 Projeto_Extensao_FATEC
- ┣ 📂 dados_originais     # Planilhas brutas baixadas do SINISA
- ┣ 📂 dados_tratados      # Banco SQLite gerado (projeto_residuos.db)
- ┣ 📂 scripts
- ┃ ┣ 📜 etl_sqlite.py           # Script responsável pelo ETL e criação do DB
- ┃ ┣ 📜 analise_estatistica.py  # Script de processamento das métricas
- ┃ ┗ 📜 app.py                  # Dashboard Web (Streamlit)
- ┣ 📜 Projeto_Final.docx  # Relatório acadêmico consolidado
- ┗ 📜 README.md
+├── dados_originais/    planilhas brutas do SINISA (o ETL usa só SINISA_RESIDUOS_Indicadores_2024.xlsx)
+├── dados_tratados/     banco SQLite e CSVs gerados pelo ETL
+├── resultados/         planilha estatística (Excel)
+├── scripts/            etl_sqlite.py, analise_estatistica.py, gerar_planilha.py, app.py
+├── sql/                01_schema.sql, 02_consultas.sql
+├── analise-residuos-sinisa.docx   relatório acadêmico
+└── requirements.txt
+```
 
- 👥 Autores
-Gabriel Champin
+## Modelo de dados
+Esquema estrela: dimensões `municipio` e `indicador`; fato `resultado_indicador` (município × indicador × ano). 4.854 municípios respondentes, 6 indicadores (IRS0001, IRS0005, IRS1004, IRS3001, IRS3002, IRS3010). Valores suspeitos são sinalizados (`flag_qualidade`), não apagados.
 
-Gabriel Kenji
+## Limitações
+- Só municípios que responderam ao módulo de resíduos entram na análise.
+- Os indicadores descrevem resíduos **urbanos municipais**; não medem resíduos industriais nem a gestão ambiental de empresas. O diagnóstico da CGA usa o SINISA apenas como contexto.
+- Correlação e regressão indicam associação, não causalidade.
 
-Luana Monteiro
-
-Pedro Genaro
-
-Walter Augusto
-
-Faculdade de Tecnologia de São Bernardo do Campo "Adib Moisés Dib"
+## Autores
+Gabriel Champin, Gabriel Kenji, Luana Monteiro, Pedro Genaro e Walter Augusto.
+Faculdade de Tecnologia de São Bernardo do Campo "Adib Moisés Dib".
