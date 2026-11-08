@@ -226,7 +226,8 @@ for coluna, (codigo, rotulo, sufixo) in zip(colunas, KPIS):
     coluna.caption(f"Mediana {formatar(r['Mediana'], 2, sufixo)} · ponderada por população {formatar(r['Média ponderada'], 2, sufixo)}")
 
 st.write("")
-aba_panorama, aba_ranking, aba_municipios, aba_metodo = st.tabs(["Panorama", "Ranking das UFs", "Municípios", "Método e limitações"])
+aba_panorama, aba_ranking, aba_comparar, aba_municipios, aba_metodo = st.tabs(
+    ["Panorama", "Ranking das UFs", "Comparar UFs", "Municípios", "Método e limitações"])
 
 # -----------------------------------------------------------------------------
 # Panorama
@@ -294,6 +295,43 @@ with aba_ranking:
                "se concentra em 0% e 100%.")
 
 # -----------------------------------------------------------------------------
+# Comparar UFs
+# -----------------------------------------------------------------------------
+with aba_comparar:
+    st.subheader("Comparar estados lado a lado")
+    padrao = [u for u in ["SP", "PI", "DF"] if u in ufs_disponiveis]
+    escolhidas = st.multiselect("Estados (até 5)", ufs_disponiveis, default=padrao, max_selections=5)
+    medida_cmp = st.radio("Medida", ["Média simples", "Média ponderada por população"], horizontal=True, key="medida_cmp")
+    chave = "Média" if medida_cmp == "Média simples" else "Média ponderada"
+    percentuais = [c for c in INDICADORES if c != "IRS1004"]
+    linhas_cmp = []
+    for nome_grupo, parte in [("Brasil", tabela_brasil)] + [(u, tabela_brasil[tabela_brasil["uf"] == u]) for u in escolhidas]:
+        for c in percentuais:
+            valor = resumo_indicador(parte[c], parte["populacao_total"])[chave]
+            if valor is not None and not pd.isna(valor):
+                linhas_cmp.append({"grupo": nome_grupo, "indicador": CURTOS[c].replace(" (%)", ""), "valor": valor,
+                                   "rotulo": formatar(valor, 1, "%")})
+    if len(escolhidas) == 0:
+        st.info("Escolha ao menos um estado para comparar com o Brasil.")
+    else:
+        df_cmp = pd.DataFrame(linhas_cmp)
+        ordem = ["Brasil"] + escolhidas
+        cores = alt.Scale(domain=ordem, range=[COR_NEUTRA] + ["#1F5E4B", "#B5451B", "#D9A441", "#4C6A92", "#7A5C8A"][:len(escolhidas)])
+        base_cmp = alt.Chart(df_cmp).encode(
+            y=alt.Y("grupo:N", sort=ordem, title=None, axis=alt.Axis(labelPadding=6)),
+            x=alt.X("valor:Q", title=None, scale=alt.Scale(domain=[0, 100])))
+        barras_cmp = base_cmp.mark_bar().encode(
+            color=alt.Color("grupo:N", scale=cores, legend=None),
+            tooltip=["grupo", "indicador", alt.Tooltip("rotulo:N", title="valor")])
+        texto_cmp = base_cmp.mark_text(align="left", dx=4, fontSize=11, color=COR_TEXTO).encode(text="rotulo:N")
+        grafico_cmp = (barras_cmp + texto_cmp).properties(height=24 * (len(ordem)), width=230).facet(
+            facet=alt.Facet("indicador:N", title=None, header=alt.Header(labelFontSize=13, labelFontWeight="bold", labelAlign="left")),
+            columns=2)
+        st.altair_chart(estilizar(grafico_cmp))
+        st.caption("As barras vão de 0% a 100%. Cinza é o Brasil, como referência. Na disposição inadequada, menor é melhor; "
+                   "nos demais indicadores, maior é melhor.")
+
+# -----------------------------------------------------------------------------
 # Municípios
 # -----------------------------------------------------------------------------
 with aba_municipios:
@@ -342,3 +380,12 @@ with aba_metodo:
         df_catalogo.rename(columns={"codigo": "Código", "nome": "Nome", "unidade": "Unidade", "definicao": "Definição"}),
         hide_index=True,
     )
+
+st.markdown(
+    '<hr style="margin-top:3rem;border:none;border-top:1px solid #D6D1C4">'
+    '<p style="font-size:0.85rem;color:#6B6F66">Projeto de extensão do 4º semestre, Faculdade de Tecnologia de São Bernardo do Campo '
+    '"Adib Moisés Dib". Autores: Gabriel Champin, Gabriel Kenji, Luana Monteiro, Pedro Genaro e Walter Augusto. '
+    'Dados: Ministério das Cidades, SINISA 2025 (ano de referência 2024). '
+    '<a href="https://github.com/gchamps/analise-residuos-sinisa">Código no GitHub</a>.</p>',
+    unsafe_allow_html=True,
+)
