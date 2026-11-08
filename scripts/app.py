@@ -477,8 +477,12 @@ with aba_municipios:
     dispersao = tabela.dropna(subset=["IRS0001", "IRS3002"])
     if len(dispersao) > 10:
         rho = float(spearmanr(dispersao["IRS0001"], dispersao["IRS3002"])[0])
-        forca = ("praticamente nenhuma" if abs(rho) < 0.1 else "fraca" if abs(rho) < 0.3
-                 else "moderada" if abs(rho) < 0.6 else "forte")
+        if pd.isna(rho):
+            texto_assoc = "Não há variação suficiente nestes municípios para calcular a correlação entre as duas medidas."
+        else:
+            forca = ("praticamente nenhuma" if abs(rho) < 0.1 else "fraca" if abs(rho) < 0.3
+                     else "moderada" if abs(rho) < 0.6 else "forte")
+            texto_assoc = f"Associação {forca} entre as duas medidas (correlação de Spearman = {formatar(rho, 2)}). Associação não é causalidade. "
         pontos = alt.Chart(dispersao.assign(nome=dispersao["nome_municipio"])).mark_circle(size=22, opacity=0.3, color=COR_PRINCIPAL).encode(
             x=alt.X("IRS0001:Q", title="Cobertura da coleta (%)", scale=alt.Scale(domain=[0, 100])),
             y=alt.Y("IRS3002:Q", title="Disposição inadequada (%)", scale=alt.Scale(domain=[0, 100])),
@@ -487,8 +491,7 @@ with aba_municipios:
                      alt.Tooltip("IRS0001:Q", title="cobertura (%)", format=".1f"),
                      alt.Tooltip("IRS3002:Q", title="disposição inadequada (%)", format=".1f")])
         st.altair_chart(estilizar(pontos.properties(height=340)))
-        st.caption(f"Associação {forca} entre as duas medidas (correlação de Spearman = {formatar(rho, 2)}). "
-                   "Associação não é causalidade. Os pontos nas linhas 0 e 100 são muitos, por isso o gráfico parece em faixas.")
+        st.caption(texto_assoc + "Muitos pontos ficam nas linhas 0 e 100, por isso o gráfico parece em faixas.")
     st.subheader("Tabela de municípios")
     df_municipios_tabela = tabela.drop(columns=["cod_ibge", "regiao"]).rename(
         columns={"nome_municipio": "município", "populacao_total": "população"})
