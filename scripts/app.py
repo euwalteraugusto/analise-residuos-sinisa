@@ -25,8 +25,12 @@ INDICADORES = ["IRS0001", "IRS0005", "IRS1004", "IRS3001", "IRS3002", "IRS3010"]
 KPIS = [
     ("IRS3002", "Disposição inadequada", "%"),
     ("IRS0001", "Cobertura da coleta", "%"),
-    ("IRS1004", "Massa per capita", " kg/hab.dia"),
+    ("IRS1004", "Massa per capita (kg/hab.dia)", ""),
 ]
+# Nomes curtos para tabelas (o nome oficial completo fica na dica e na aba Método)
+CURTOS = {"IRS0001": "Cobertura da coleta (%)", "IRS0005": "Coleta seletiva (%)", "IRS1004": "Massa per capita (kg/hab.dia)",
+          "IRS3001": "Desempenho da coleta seletiva (%)", "IRS3002": "Disposição inadequada (%)",
+          "IRS3010": "Recuperação de recicláveis (%)"}
 TODO_BRASIL = "Brasil (todas as UFs)"
 
 
@@ -141,6 +145,11 @@ st.markdown(
     .kicker {font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6B6F66; margin-bottom: 0.2rem;}
     .lede {font-family: serif; font-size: 1.35rem; line-height: 1.45; margin: 0.4rem 0 1.4rem 0; max-width: 62rem;}
     div[data-testid="stMetricValue"] {font-family: serif;}
+    @media (max-width: 640px) {
+        .block-container {padding-top: 3rem;}
+        h1 {font-size: 2rem !important; line-height: 1.15 !important;}
+        .lede {font-size: 1.1rem;}
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -247,12 +256,14 @@ with aba_panorama:
             .encode(x="m:Q", y=alt.value(0), text="t:N")
         )
         st.altair_chart(estilizar((barras + linha_med + rotulo_med).properties(height=300)))
-        st.caption(f"{(serie == 0).mean() * 100:.1f}% dos municípios têm valor 0 e {(serie == 100).mean() * 100:.1f}% têm valor 100. "
+        st.caption(f"{formatar((serie == 0).mean() * 100, 1)}% dos municípios têm valor 0 e {formatar((serie == 100).mean() * 100, 1)}% têm valor 100. "
                    "Quando os valores se concentram nos extremos, a média representa pouco; compare com a mediana.")
 
     st.subheader("Resumo estatístico")
-    linhas = [{"Código": c, "Indicador": nomes[c], **resumo_uf[c]} for c in INDICADORES]
-    st.dataframe(pd.DataFrame(linhas).round(2), hide_index=True)
+    linhas = [{"Indicador": CURTOS[c], **resumo_uf[c]} for c in INDICADORES]
+    st.dataframe(pd.DataFrame(linhas).round(2), hide_index=True,
+                 column_config={col: st.column_config.NumberColumn(col, format="localized")
+                                for col in resumo_uf[INDICADORES[0]]})
     if uf_selecionada == "DF":
         st.caption("O DF tem apenas 1 município; interprete os resultados com cautela.")
     if uf_selecionada == "SP":
@@ -295,12 +306,9 @@ with aba_municipios:
         "uf": st.column_config.TextColumn("UF", width="small"),
         "população": st.column_config.NumberColumn("População", format="localized"),
     }
-    curtos = {"IRS0001": "Cobertura da coleta (%)", "IRS0005": "Coleta seletiva (%)", "IRS1004": "Massa per capita (kg/hab.dia)",
-              "IRS3001": "Desempenho da coleta seletiva (%)", "IRS3002": "Disposição inadequada (%)",
-              "IRS3010": "Recuperação de recicláveis (%)"}
     for c in INDICADORES:
         config_colunas[c] = st.column_config.NumberColumn(
-            curtos[c], help=f"{c}: {nomes[c]} ({unidades.get(c, '%')})", format="localized", width="medium")
+            CURTOS[c], help=f"{c}: {nomes[c]} ({unidades.get(c, '%')})", format="localized", width="medium")
     st.caption("Passe o mouse sobre o título da coluna para ver o código e a definição do indicador. Clique no título para ordenar.")
     tabela_exibida = df_municipios_tabela.copy()
     tabela_exibida[INDICADORES] = tabela_exibida[INDICADORES].round(2)
@@ -320,7 +328,7 @@ with aba_metodo:
         "- **Fonte:** Ministério das Cidades, SINISA 2025 (ano de referência 2024), planilha de indicadores de "
         "resíduos sólidos urbanos.\n"
         f"- **Cobertura:** {int(df_municipios['respondeu'].sum())} de {len(df_municipios)} municípios do país "
-        f"responderam ao módulo ({df_municipios['respondeu'].mean() * 100:.1f}%). Os demais ficam fora da análise.\n"
+        f"responderam ao módulo ({formatar(df_municipios['respondeu'].mean() * 100, 1)}%). Os demais ficam fora da análise.\n"
         "- **Média ponderada:** usa a população total do município como peso.\n"
         "- **Valores suspeitos:** percentuais acima de 100 e massa per capita acima de 3 kg/hab.dia são "
         "marcados no ETL e mantidos por padrão; use o filtro lateral para excluí-los.\n"
