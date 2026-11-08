@@ -52,7 +52,7 @@ FLAG_PERCENTUAL = "PERCENTUAL_ACIMA_100"
 FLAG_MASSA = "MASSA_PER_CAPITA_ALTA"
 
 # Catálogo dos indicadores utilizados.
-# Nomes, unidades e grupos conforme o Glossário de Indicadores SINISA 2024.
+# Nomes, unidades e grupos conforme o Glossário de Indicadores SINISA 2025.
 # (codigo, nome, unidade, grupo, definicao)
 INDICADORES = [
     ("IRS0001",

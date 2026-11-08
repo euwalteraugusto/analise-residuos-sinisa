@@ -4,8 +4,8 @@
 -- Projeto de Extensão do 4º semestre - FATEC São Bernardo do Campo
 -- MPV: Análise e Diagnóstico da Gestão de Resíduos Sólidos
 --
--- Fonte dos dados: Ministério das Cidades / SINISA 2024 (ano de referência
--- 2023), planilha de indicadores municipais de resíduos sólidos urbanos.
+-- Fonte dos dados: Ministério das Cidades / SINISA 2025 (ano de referência
+-- 2024), planilha de indicadores municipais de resíduos sólidos urbanos.
 --
 -- Modelo: esquema estrela simplificado (modelo dimensional).
 --   * Dimensões: municipio e indicador
@@ -45,7 +45,7 @@ CREATE TABLE municipio (
 
 -- -----------------------------------------------------------------------------
 -- Dimensão: indicador (catálogo dos indicadores utilizados no projeto)
--- Nomes, unidades e grupos conforme o Glossário de Indicadores do SINISA 2024.
+-- Nomes, unidades e grupos conforme o Glossário de Indicadores do SINISA 2025.
 -- -----------------------------------------------------------------------------
 CREATE TABLE indicador (
     codigo     TEXT PRIMARY KEY,                          -- ex.: IRS3002

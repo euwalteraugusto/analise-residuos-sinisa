@@ -441,6 +441,7 @@ def montar(df, catalogo, totais_uf):
         ("Testes_Python", "Spearman e teste de Mann-Whitney (valores fixos calculados em Python)."),
         ("Qualidade_Dados", "Valores sinalizados e efeito sobre as médias."),
         ("Dados", "Base de municípios respondentes (um por linha), com filtros."),
+        ("Diagnostico_Empresa", "Checklist ambiental e de qualidade de uma empresa: índice de conformidade, gráfico e plano 5W2H (ferramenta reutilizável)."),
     ]
     for i, (aba, descricao) in enumerate(abas):
         r = 15 + i
@@ -467,8 +468,105 @@ def montar(df, catalogo, totais_uf):
     for i, texto in enumerate(limites):
         escrever(ws_leia, f"A{base + 6 + i}", f"{i + 1}. {texto}", F_NORMAL, alinhamento=Alignment(wrap_text=False))
     larguras(ws_leia, {"A": 46, "B": 90})
+    aba_diagnostico(wb)
 
     return wb
+
+
+# -----------------------------------------------------------------------------
+# Aba de diagnóstico de empresa (checklist ambiental e de qualidade)
+# -----------------------------------------------------------------------------
+# (pergunta, categoria, resposta desejável). "Há desperdício visível?" é o único
+# item em que a boa resposta é "Não".
+CHECKLIST = [
+    ("A empresa realiza separação de resíduos?", "Resíduos", "Sim"),
+    ("Existe coleta seletiva?", "Resíduos", "Sim"),
+    ("Há controle do consumo de água?", "Recursos", "Sim"),
+    ("Há controle do consumo de energia?", "Recursos", "Sim"),
+    ("Existe descarte correto de resíduos perigosos?", "Resíduos", "Sim"),
+    ("A empresa possui ações de sustentabilidade?", "Pessoas e cultura", "Sim"),
+    ("Funcionários recebem orientação ambiental?", "Pessoas e cultura", "Sim"),
+    ("Há desperdício visível de materiais?", "Recursos", "Não"),
+    ("Existem práticas de reaproveitamento de materiais?", "Resíduos", "Sim"),
+    ("O local possui organização adequada dos processos?", "Processos e qualidade", "Sim"),
+    ("A empresa trabalha com alguma ferramenta da qualidade?", "Processos e qualidade", "Sim"),
+    ("Existe uma visão sobre a qualidade na empresa?", "Processos e qualidade", "Sim"),
+]
+CATEGORIAS = ["Resíduos", "Recursos", "Pessoas e cultura", "Processos e qualidade"]
+
+
+def aba_diagnostico(wb):
+    """Planilha reutilizável: o usuário responde o checklist e recebe índice,
+    não conformidades por categoria e um 5W2H para as não conformidades."""
+    ws = wb.create_sheet("Diagnostico_Empresa", 1)
+    titulo(ws, "Diagnóstico ambiental e de qualidade de uma empresa",
+           "Responda Sim/Não nas células amarelas. Índice, gráfico e plano de ação se atualizam sozinhos.")
+    for i, rotulo in enumerate(["Empresa", "Ramo", "Responsável", "Data da visita"]):
+        escrever(ws, f"A{4 + i}", rotulo, F_NEGRITO, borda=True)
+        escrever(ws, f"B{4 + i}", None, F_ENTRADA, borda=True, preenchimento=FILL_EDITAVEL)
+
+    cabecalho(ws, 9, ["#", "Pergunta", "Resposta", "Categoria", "Resposta desejável", "Conforme? (1=sim)",
+                      "Observação / evidência (foto, registro)"])
+    primeira, ultima = 10, 9 + len(CHECKLIST)
+    for i, (pergunta, categoria, desejavel) in enumerate(CHECKLIST):
+        r = primeira + i
+        escrever(ws, f"A{r}", i + 1, F_NORMAL, borda=True, alinhamento=CENTRO)
+        escrever(ws, f"B{r}", pergunta, F_NORMAL, borda=True, alinhamento=ESQUERDA)
+        escrever(ws, f"C{r}", None, F_ENTRADA, borda=True, alinhamento=CENTRO, preenchimento=FILL_EDITAVEL)
+        escrever(ws, f"D{r}", categoria, F_NORMAL, borda=True)
+        escrever(ws, f"E{r}", desejavel, F_NORMAL, borda=True, alinhamento=CENTRO)
+        escrever(ws, f"F{r}", f'=IF(C{r}="","",IF(C{r}=E{r},1,0))', F_NORMAL, borda=True, alinhamento=CENTRO)
+        escrever(ws, f"G{r}", None, F_ENTRADA, borda=True, alinhamento=ESQUERDA, preenchimento=FILL_EDITAVEL)
+    validacao = DataValidation(type="list", formula1='"Sim,Não"', allow_blank=True)
+    ws.add_data_validation(validacao)
+    validacao.add(f"C{primeira}:C{ultima}")
+    faixa_f = f"F{primeira}:F{ultima}"
+    ws.conditional_formatting.add(faixa_f, FormulaRule(formula=[f"F{primeira}=1"], fill=PatternFill("solid", bgColor="C6EFCE")))
+    ws.conditional_formatting.add(faixa_f, FormulaRule(formula=[f"F{primeira}=0"], fill=PatternFill("solid", bgColor="FFC7CE")))
+    nota(ws, f"A{ultima + 1}", "Pergunta 11: se Sim, registre a ferramenta usada (PDCA, 5W2H, Ishikawa, etc.) na coluna de observação.")
+
+    r0 = ultima + 3
+    escrever(ws, f"A{r0}", "Resumo", F_NEGRITO)
+    resumo = [
+        ("Itens respondidos", f"=COUNT({faixa_f})", FMT_INT),
+        ("Itens conformes", f"=SUM({faixa_f})", FMT_INT),
+        ("Índice de conformidade", f'=IF(B{r0 + 1}=0,"",B{r0 + 2}/B{r0 + 1})', FMT_PCT),
+        ("Classificação", f'=IF(B{r0 + 3}="","Responda o checklist",IF(B{r0 + 3}>=0.8,"Madura",IF(B{r0 + 3}>=0.5,"Em desenvolvimento","Crítica")))', None),
+    ]
+    for i, (rotulo, formula, fmt) in enumerate(resumo):
+        escrever(ws, f"A{r0 + 1 + i}", rotulo, F_NEGRITO, borda=True)
+        escrever(ws, f"B{r0 + 1 + i}", formula, F_NORMAL, fmt, borda=True, alinhamento=Alignment(horizontal="left"))
+    nota(ws, f"A{r0 + 5}", "Faixas (critério do projeto, ajustável): ≥ 80% madura; 50% a 79% em desenvolvimento; < 50% crítica.")
+
+    r1 = r0 + 7
+    escrever(ws, f"A{r1}", "Não conformidades por categoria", F_NEGRITO)
+    cabecalho(ws, r1 + 1, ["", "Categoria", "Não conformidades", "% do total"])
+    for i, cat in enumerate(CATEGORIAS):
+        r = r1 + 2 + i
+        escrever(ws, f"B{r}", cat, F_NORMAL, borda=True)
+        escrever(ws, f"C{r}", f'=COUNTIFS($D${primeira}:$D${ultima},B{r},{faixa_f},0)', F_NORMAL, FMT_INT, borda=True)
+        total = f"SUM($C${r1 + 2}:$C${r1 + 1 + len(CATEGORIAS)})"
+        escrever(ws, f"D{r}", f'=IF({total}=0,"",C{r}/{total})', F_NORMAL, FMT_PCT, borda=True)
+    grafico = BarChart()
+    grafico.type, grafico.title = "bar", "Não conformidades por categoria"
+    grafico.add_data(Reference(ws, min_col=3, min_row=r1 + 1, max_row=r1 + 1 + len(CATEGORIAS)), titles_from_data=True)
+    grafico.set_categories(Reference(ws, min_col=2, min_row=r1 + 2, max_row=r1 + 1 + len(CATEGORIAS)))
+    grafico.legend, grafico.height, grafico.width = None, 7, 14
+    ws.add_chart(grafico, f"F{r0}")
+
+    r2 = r1 + len(CATEGORIAS) + 4
+    escrever(ws, f"A{r2}", "Plano de ação 5W2H (gerado a partir das não conformidades)", F_NEGRITO)
+    cabecalho(ws, r2 + 1, ["#", "O quê (What)", "Por quê (Why)", "Onde (Where)", "Quando (When)",
+                           "Quem (Who)", "Como (How)", "Quanto (How much)"])
+    for i in range(len(CHECKLIST)):
+        r = r2 + 2 + i
+        escrever(ws, f"A{r}", f'=IF(F{primeira + i}=0,A{primeira + i},"")', F_NORMAL, borda=True, alinhamento=CENTRO)
+        escrever(ws, f"B{r}", f'=IF(F{primeira + i}=0,"Corrigir: "&B{primeira + i},"")', F_NORMAL, borda=True, alinhamento=ESQUERDA)
+        for col in "CDEFGH":
+            escrever(ws, f"{col}{r}", None, F_ENTRADA, borda=True, alinhamento=ESQUERDA, preenchimento=FILL_EDITAVEL)
+    nota(ws, f"A{r2 + 2 + len(CHECKLIST)}", "Linhas só aparecem preenchidas nos itens não conformes. Use a ISO 9001 e a ISO 14001 como referência para definir o Como.")
+    larguras(ws, {"A": 26, "B": 58, "C": 22, "D": 24, "E": 20, "F": 20, "G": 40, "H": 22})
+    ws.freeze_panes = "A10"
 
 
 def executar():
