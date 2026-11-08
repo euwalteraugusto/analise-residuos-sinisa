@@ -37,7 +37,7 @@ KPIS = [
     ("IRS0001", "Cobertura da coleta", "%"),
     ("IRS1004", "Massa per capita", ""),
 ]
-UNIDADE_KPI = {"IRS3002": "", "IRS0001": "", "IRS1004": "kg por habitante por dia · "}
+UNIDADE_KPI = {"IRS3002": "% dos resíduos coletados", "IRS0001": "% da população atendida", "IRS1004": "kg por habitante por dia"}
 # Nomes curtos para tabelas (o nome oficial completo fica na dica e na aba Método)
 CURTOS = {"IRS0001": "Cobertura da coleta (%)", "IRS0005": "Coleta seletiva (%)", "IRS1004": "Massa per capita (kg/hab.dia)",
           "IRS3001": "Desempenho da coleta seletiva (%)", "IRS3002": "Disposição inadequada (%)",
@@ -161,6 +161,10 @@ st.markdown(
     .kicker {font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6B6F66; margin-bottom: 0.2rem;}
     .lede {font-family: serif; font-size: 1.35rem; line-height: 1.45; margin: 0.4rem 0 1.4rem 0; max-width: 62rem;}
     div[data-testid="stMetricValue"] {font-family: serif;}
+    div[data-testid="stMetricLabel"] p {font-size: 0.85rem;}
+    div[data-testid="stHorizontalBlock"] {align-items: stretch !important;}
+    div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] {height: 100%;}
+    div[data-testid="stColumn"] > div > div[data-testid="stVerticalBlockBorderWrapper"] {height: 100%;}
     div[data-testid="stVerticalBlockBorderWrapper"] {background: #FFFFFF; border: 1px solid #D6D1C4; border-radius: 6px;}
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {border: none; background: transparent;}
     .passo {font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: #B5451B; font-weight: 600; margin: 0 0 -0.4rem 0;}
@@ -268,7 +272,7 @@ for coluna, (codigo, rotulo, sufixo) in zip(colunas, KPIS):
         st.metric(rotulo, formatar(r["Média"], 2, sufixo), delta,
                   delta_color="inverse" if codigo == "IRS3002" else ("off" if codigo == "IRS1004" else "normal"),
                   help=f"{codigo} - {nomes[codigo]}. Média simples dos municípios.")
-        st.caption(f"{UNIDADE_KPI[codigo]}Mediana {formatar(r['Mediana'], 2, sufixo)} · ponderada por população {formatar(r['Média ponderada'], 2, sufixo)}")
+        st.caption(f"{UNIDADE_KPI[codigo]}  \nMediana {formatar(r['Mediana'], 2, sufixo)}  \nMédia ponderada {formatar(r['Média ponderada'], 2, sufixo)}")
 
 st.divider()
 aba_panorama, aba_estados, aba_municipios, aba_metodo = st.tabs(["Panorama", "Estados", "Municípios", "Método e limitações"])
@@ -309,7 +313,7 @@ def centro_do_poligono(geometria):
 
 with aba_panorama:
     with st.container(border=True):
-        st.markdown('<div class="passo">Passo 1 · Onde</div>', unsafe_allow_html=True)
+        st.markdown('<div class="passo">Regiões</div>', unsafe_allow_html=True)
         # 1) Onde: regiões ---------------------------------------------------------
         st.subheader(f"Onde é pior: a região {pior_regiao['regiao']} destina {formatar(pior_regiao['disposicao'], 0, '%')} dos "
                      f"resíduos de forma inadequada; a {melhor_regiao['regiao']}, {formatar(melhor_regiao['disposicao'], 0, '%')}")
@@ -335,7 +339,7 @@ with aba_panorama:
                    + (f" A região de {uf_selecionada} ({regiao_da_uf}) está em destaque." if regiao_da_uf else ""))
 
     with st.container(border=True):
-        st.markdown('<div class="passo">Passo 2 · Quanto, estado a estado</div>', unsafe_allow_html=True)
+        st.markdown('<div class="passo">Mapa</div>', unsafe_allow_html=True)
         # 2) Mapa --------------------------------------------------------------------
         ordenado = ranking.sort_values("media_simples", ascending=False)
         piores = ", ".join(ordenado["uf"].head(3))
@@ -365,7 +369,7 @@ with aba_panorama:
                       "informação não preenchida, e os valores baixos dessas UFs devem ser lidos com cautela." if suspeitas_txt else ""))
 
     with st.container(border=True):
-        st.markdown('<div class="passo">Passo 3 · Quem</div>', unsafe_allow_html=True)
+        st.markdown('<div class="passo">Porte dos municípios</div>', unsafe_allow_html=True)
         # 3) Porte -------------------------------------------------------------------
         pior_faixa = por_faixa.sort_values("disposicao").iloc[-1]
         melhor_faixa = por_faixa.sort_values("disposicao").iloc[0]
@@ -391,36 +395,44 @@ with aba_panorama:
                    "vai para disposição inadequada.")
 
     with st.container(border=True):
-        st.markdown('<div class="passo">Passo 4 · Por que a média engana</div>', unsafe_allow_html=True)
+        st.markdown('<div class="passo">Distribuição</div>', unsafe_allow_html=True)
         # 4) Por que a média engana -----------------------------------------------------
-        st.subheader("Por que a média engana: os valores se concentram nos extremos")
-        indicador_dist = st.selectbox("Indicador", INDICADORES, index=INDICADORES.index("IRS3002"),
-                                      format_func=lambda c: f"{CURTOS[c]}")
-        serie = tabela[indicador_dist].dropna()
-        if serie.empty:
-            st.write("Sem dados para exibir.")
-        else:
-            mediana = float(serie.median())
-            dados_hist = pd.DataFrame({"valor": serie})
-            barras = (
-                alt.Chart(dados_hist)
-                .mark_bar(color=COR_NEUTRA)
-                .encode(
-                    x=alt.X("valor:Q", bin=alt.Bin(maxbins=20), title="Valor do indicador"),
-                    y=alt.Y("count()", title="Municípios", axis=alt.Axis(grid=True, gridColor="#E6E1D4", gridDash=[2, 3])),
-                )
-            )
-            linha_med = alt.Chart(pd.DataFrame({"m": [mediana]})).mark_rule(color=COR_TEXTO, strokeWidth=2, strokeDash=[5, 3]).encode(x="m:Q")
-            rotulo_med = (
-                alt.Chart(pd.DataFrame({"m": [mediana], "t": [f"mediana {formatar(mediana, 1)}"]}))
-                .mark_text(align="left", dx=6, dy=-4, color=COR_TEXTO, fontSize=12, baseline="top")
-                .encode(x="m:Q", y=alt.value(0), text="t:N")
-            )
-            st.altair_chart(estilizar((barras + linha_med + rotulo_med).properties(height=280)))
-            st.caption(f"{formatar((serie == 0).mean() * 100, 1)}% dos municípios têm valor 0 e {formatar((serie == 100).mean() * 100, 1)}% têm valor 100. "
-                       "Quando os valores se concentram nos extremos, a média representa pouco; compare com a mediana. "
-                       "O valor 0 pode indicar ausência do serviço ou da informação.")
-
+        pct_indic = [c for c in INDICADORES if c != "IRS1004"]
+        rotulos_sit4 = ["0%", "1% a 99%", "100%"]
+        linhas_d = []
+        for c in pct_indic:
+            v = tabela[c].dropna()
+            if len(v) == 0:
+                continue
+            z, cem = (v == 0).mean() * 100, (v >= 100).mean() * 100
+            for ordem_s, (sit, val) in enumerate(zip(rotulos_sit4, [z, 100 - z - cem, cem])):
+                linhas_d.append({"indicador": CURTOS[c].replace(" (%)", ""), "situacao": sit, "pct": val, "ordem": ordem_s,
+                                 "rotulo": formatar(val, 0, "%") if val >= 4 else ""})
+        s3002 = tabela["IRS3002"].dropna()
+        if len(s3002) and linhas_d:
+            z3, c3 = (s3002 == 0).mean() * 100, (s3002 >= 100).mean() * 100
+            st.subheader(f"Por que a média engana: {formatar(z3 + c3, 0, '%')} dos municípios registram 0% ou 100% de disposição inadequada")
+            st.markdown(
+                f"A média ({formatar(s3002.mean(), 1, '%')}) não descreve um município típico. {formatar(z3, 0, '%')} registram 0%, "
+                f"{formatar(c3, 0, '%')} registram 100% e só {formatar(100 - z3 - c3, 0, '%')} ficam no meio. Por isso, em vez de só a média, "
+                "o gráfico abaixo mostra como os municípios se dividem em cada indicador.")
+            df_d = pd.DataFrame(linhas_d)
+            ordem_ind = list(dict.fromkeys(df_d["indicador"]))
+            base_d = alt.Chart(df_d).encode(
+                y=alt.Y("indicador:N", sort=ordem_ind, title=None, axis=alt.Axis(labelLimit=260, labelPadding=6, labelOverlap=False)),
+                x=alt.X("pct:Q", title="% dos municípios", scale=alt.Scale(domain=[0, 100])))
+            barras_d = base_d.mark_bar(size=26).encode(
+                color=alt.Color("situacao:N", sort=rotulos_sit4,
+                                scale=alt.Scale(domain=rotulos_sit4, range=["#C9CED6", "#E2D4B0", "#4C6A92"]),
+                                legend=alt.Legend(title="Valor registrado", orient="top")),
+                order=alt.Order("ordem:Q"),
+                tooltip=["indicador", "situacao", alt.Tooltip("pct:Q", title="% dos municípios", format=".1f")])
+            textos_d = base_d.mark_text(fontSize=12).encode(
+                text="rotulo:N", order=alt.Order("ordem:Q"), x=alt.X("pct:Q", stack="zero", bandPosition=0.5),
+                color=alt.condition(alt.datum.situacao == "100%", alt.value("#FFFFFF"), alt.value(COR_TEXTO)))
+            st.altair_chart(estilizar((barras_d + textos_d).properties(height=48 * len(ordem_ind))))
+            st.caption("Cada barra soma 100% dos municípios. Cinza: registraram 0%. Azul: registraram 100%. Areia: ficaram entre 1% e 99%. "
+                       "O valor 0 pode indicar ausência do serviço ou informação não preenchida.")
         with st.expander("Ver tabela estatística completa"):
             linhas = [{"Indicador": CURTOS[c], **resumo_uf[c]} for c in INDICADORES]
             st.dataframe(pd.DataFrame(linhas).round(2), hide_index=True,
@@ -467,13 +479,14 @@ with aba_estados:
         escolhidas = st.multiselect("Estados (até 5)", ufs_disponiveis, default=padrao, max_selections=5)
         medida_cmp = st.radio("Medida", ["Média simples", "Média ponderada por população"], horizontal=True, key="medida_cmp")
         chave = "Média" if medida_cmp == "Média simples" else "Média ponderada"
-        percentuais = [c for c in INDICADORES if c != "IRS1004"]
+        curtos_cmp = {"IRS0001": "Cobertura da coleta", "IRS0005": "Coleta seletiva", "IRS3001": "Desempenho da coleta seletiva",
+                      "IRS3002": "Disposição inadequada", "IRS3010": "Recuperação de recicláveis"}
         linhas_cmp = []
         for nome_grupo, parte in [("Brasil", tabela_brasil)] + [(u, tabela_brasil[tabela_brasil["uf"] == u]) for u in escolhidas]:
-            for c in percentuais:
+            for c in curtos_cmp:
                 valor = resumo_indicador(parte[c], parte["populacao_total"])[chave]
                 if valor is not None and not pd.isna(valor):
-                    linhas_cmp.append({"grupo": nome_grupo, "indicador": CURTOS[c].replace(" (%)", ""), "valor": valor,
+                    linhas_cmp.append({"grupo": nome_grupo, "indicador": curtos_cmp[c], "valor": valor,
                                        "rotulo": formatar(valor, 1, "%")})
         if len(escolhidas) == 0:
             st.info("Escolha ao menos um estado para comparar com o Brasil.")
@@ -482,26 +495,25 @@ with aba_estados:
             ordem = ["Brasil"] + escolhidas
             cores = alt.Scale(domain=ordem, range=[COR_NEUTRA] + CORES_GRUPOS[:len(escolhidas)])
             base_cmp = alt.Chart(df_cmp).encode(
-                y=alt.Y("grupo:N", sort=ordem, title=None, axis=alt.Axis(labelPadding=6)),
-                x=alt.X("valor:Q", title=None, scale=alt.Scale(domain=[0, 100])))
+                x=alt.X("indicador:N", sort=list(curtos_cmp.values()), title=None,
+                        axis=alt.Axis(grid=False, labelAngle=0, labelLimit=180, labelPadding=8)),
+                y=alt.Y("valor:Q", title="%", scale=alt.Scale(domain=[0, 108]),
+                        axis=alt.Axis(grid=True, gridColor="#E6E1D4", gridDash=[2, 3], values=[0, 20, 40, 60, 80, 100])),
+                xOffset=alt.XOffset("grupo:N", sort=ordem))
             barras_cmp = base_cmp.mark_bar().encode(
-                color=alt.Color("grupo:N", scale=cores, legend=None),
+                color=alt.Color("grupo:N", scale=cores, sort=ordem, legend=alt.Legend(title=None, orient="top", direction="horizontal")),
                 tooltip=["grupo", "indicador", alt.Tooltip("rotulo:N", title="valor")])
-            texto_cmp = base_cmp.mark_text(align="left", dx=4, fontSize=11, color=COR_TEXTO).encode(text="rotulo:N")
-            grafico_cmp = (barras_cmp + texto_cmp).properties(height=24 * len(ordem), width=330).facet(
-                facet=alt.Facet("indicador:N", title=None,
-                                header=alt.Header(labelFontSize=13, labelFontWeight="bold", labelAlign="left")),
-                columns=2)
-            st.altair_chart(estilizar(grafico_cmp))
-            st.caption("As barras vão de 0% a 100%. Cinza é o Brasil, como referência. Na disposição inadequada, menor é melhor; "
-                       "nos demais indicadores, maior é melhor. As cores dos estados só os distinguem.")
+            texto_cmp = base_cmp.mark_text(dy=-7, fontSize=10, color=COR_TEXTO).encode(text="rotulo:N")
+            st.altair_chart(estilizar((barras_cmp + texto_cmp).properties(height=360)))
+            st.caption("Cinza é o Brasil, como referência. Na disposição inadequada, menor é melhor; nos demais indicadores, "
+                       "maior é melhor. As cores dos estados só os distinguem.")
 
 # -----------------------------------------------------------------------------
 # Municípios
 # -----------------------------------------------------------------------------
 with aba_municipios:
     with st.container(border=True):
-        st.markdown('<div class="passo">Cobertura × destinação</div>', unsafe_allow_html=True)
+        st.markdown('<div class="passo">Cobertura e destinação</div>', unsafe_allow_html=True)
         st.subheader("Cobertura da coleta e disposição inadequada: como os municípios se distribuem")
         dispersao = tabela.dropna(subset=["IRS0001", "IRS3002"]).copy()
         if len(dispersao) > 10:
@@ -515,7 +527,7 @@ with aba_municipios:
             cont = cont[cont["total"] > 0].copy()
             cont["pct"] = cont["n"] / cont["total"] * 100
             cont["ordem"] = cont["situacao"].map({s: i for i, s in enumerate(rotulos_sit)}).astype(int)
-            cont["rotulo"] = cont["pct"].map(lambda v: formatar(v, 0, "%") if v >= 6 else "")
+            cont["rotulo"] = cont["pct"].map(lambda v: formatar(v, 0, "%") if v >= 3 else "")
             cont["eixo"] = [f"{f} ({formatar(t, 0)})" for f, t in zip(cont["faixa_cob"], cont["total"])]
             cont["faixa_cob"] = cont["faixa_cob"].astype(str)
             cont["situacao"] = cont["situacao"].astype(str)
@@ -543,7 +555,7 @@ with aba_municipios:
                 frases.append(f"Correlação de Spearman = {formatar(rho, 2)} (associação, não causalidade).")
             st.caption(" ".join(frases) + " Um 0% mesmo com cobertura baixa pode indicar informação não preenchida, e isso não foi verificado.")
     with st.container(border=True):
-        st.markdown('<div class="passo">Dados</div>', unsafe_allow_html=True)
+        st.markdown('<div class="passo">Dados por município</div>', unsafe_allow_html=True)
         st.subheader("Tabela de municípios")
         df_municipios_tabela = tabela.drop(columns=["cod_ibge", "regiao"]).rename(
             columns={"nome_municipio": "município", "populacao_total": "população"})
