@@ -26,7 +26,7 @@ Para regenerar a planilha: `python scripts/gerar_planilha.py` (usa `scripts/anal
 ## Estrutura
 ```text
 ├── dados_originais/    planilhas brutas do SINISA (o ETL usa só SINISA_RESIDUOS_Indicadores_2024.xlsx)
-├── dados_tratados/     banco SQLite e CSVs gerados pelo ETL
+├── dados_tratados/     banco SQLite e CSVs gerados pelo ETL; br_ufs.geojson (malha das UFs, IBGE) usada no mapa
 ├── resultados/         planilha estatística (Excel)
 ├── scripts/            etl_sqlite.py, analise_estatistica.py, gerar_planilha.py, app.py
 ├── sql/                01_schema.sql, 02_consultas.sql
