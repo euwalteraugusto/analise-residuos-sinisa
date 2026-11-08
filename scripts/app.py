@@ -289,7 +289,22 @@ with aba_municipios:
     st.subheader("Municípios")
     df_municipios_tabela = tabela.drop(columns=["cod_ibge", "regiao"]).rename(
         columns={"nome_municipio": "município", "populacao_total": "população"})
-    st.dataframe(df_municipios_tabela, hide_index=True)
+    unidades = {"IRS1004": "kg/hab.dia"}
+    config_colunas = {
+        "município": st.column_config.TextColumn("Município", pinned=True),
+        "uf": st.column_config.TextColumn("UF", width="small"),
+        "população": st.column_config.NumberColumn("População", format="localized"),
+    }
+    curtos = {"IRS0001": "Cobertura da coleta (%)", "IRS0005": "Coleta seletiva (%)", "IRS1004": "Massa per capita (kg/hab.dia)",
+              "IRS3001": "Desempenho da coleta seletiva (%)", "IRS3002": "Disposição inadequada (%)",
+              "IRS3010": "Recuperação de recicláveis (%)"}
+    for c in INDICADORES:
+        config_colunas[c] = st.column_config.NumberColumn(
+            curtos[c], help=f"{c}: {nomes[c]} ({unidades.get(c, '%')})", format="localized", width="medium")
+    st.caption("Passe o mouse sobre o título da coluna para ver o código e a definição do indicador. Clique no título para ordenar.")
+    tabela_exibida = df_municipios_tabela.copy()
+    tabela_exibida[INDICADORES] = tabela_exibida[INDICADORES].round(2)
+    st.dataframe(tabela_exibida, hide_index=True, column_config=config_colunas)
     st.download_button(
         "Baixar tabela (CSV)",
         data=df_municipios_tabela.to_csv(index=False).encode("utf-8-sig"),
